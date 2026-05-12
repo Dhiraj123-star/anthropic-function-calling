@@ -58,15 +58,13 @@ def get_current_weather(city:str,unit:str="celsius") ->str:
         return f"Error: {ex}"
 
 
-
-
 # -----------------
 # Tool Definition
 # -----------------
 
 tools = [
     {
-        "name":"get_weather",
+        "name":"get_current_weather",
         "description":"Get current weather for a city",
         "input_schema":{
             "type":"object",
@@ -81,61 +79,106 @@ tools = [
     }
 ]
 
+# -----------------------
+# Conversation history
+# -----------------------
+
+messages = []
+
+print("Anthropic Weather Assistant")
+print("Type 'exit' to quit.\n")
+
 # --------------------
-# Initial request
+# Chat loop
 # --------------------
-response = client.messages.create(
-    model="claude-sonnet-4-6",
-    max_tokens= 1024,
-    tools=tools,
-    messages=[
+while True:
+    user_input = input("You: ")
+    if user_input.lower()=="exit":
+        break
+
+    # Add user message
+    messages.append(
         {
             "role":"user",
-            "content":"What is weather in New Delhi?"
+            "content":user_input
         }
-    ]
-)
+    )
 
-# -----------------
-# Tool execution
-# -----------------
-for content in response.content:
-    if content.type=="tool_use":
-        tool_name = content.name
-        tool_input=content.input
+    # -------------
+    # Claude API call
+    # -------------
 
-        print(f"\nTool called:{tool_name}")
-        print(tool_input)
+    response = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens= 1024,
+        tools=tools,
+        messages=messages
+    )
 
-        if tool_name=="get_weather":
-            result = get_current_weather(tool_input["city"])
+    # save assistant response
+    messages.append(
+        {
+            "role": "assistant",
+            "content": response.content
+        }
+    )
+    tool_used = False
 
-            # Send tool result back
-            final_response= client.messages.create(
-                model="claude-sonnet-4-6",
-                max_tokens=1024,
-                tools=tools,
-                messages =[
-                    {
-                        "role":"user",
-                        "content":"What is the weather in New Delhi?",
+    # -----------------
+    # Tool execution
+    # -----------------
+    for content in response.content:
+        if content.type=="tool_use":
 
-                    },
-                    {
-                        "role":"assistant",
-                        "content":response.content
-                    },
+            tool_used=True
+
+            tool_name = content.name
+            tool_input=content.input
+
+            print(f"\nTool called:{tool_name}")
+            print(tool_input)
+
+            if tool_name=="get_current_weather":
+                result = get_current_weather(tool_input["city"])
+
+                # Add Tool result
+                messages.append(
                     {
                         "role":"user",
                         "content":[
                             {
                                 "type":"tool_result",
                                 "tool_use_id":content.id,
-                                "content":json.dumps(result)
+                                "content":result
                             }
                         ]
                     }
-                ]
-            )
-            print("\nFinal Response:\n")
-            print(final_response.content[0].text)
+                )
+
+                # Send tool result back
+                final_response= client.messages.create(
+                    model="claude-sonnet-4-6",
+                    max_tokens=1024,
+                    tools=tools,
+                    messages =messages
+                )
+                assistant_text= final_response.content[0].text
+
+
+                print(f"\nClaude: {assistant_text}\n")
+
+                # save final assistant response
+                messages.append(
+                    {
+                        "role":"assistant",
+                        "content":final_response.content
+                    }
+                )
+
+        # --------------------------
+        # Normal Non-Tool Response
+        # --------------------------
+        if not tool_used:
+            assistant_text = response.content[0].text
+
+            print(f"\nClaude: {assistant_text}\n")
