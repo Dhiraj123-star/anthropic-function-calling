@@ -2,15 +2,23 @@
 
 A simple Python project demonstrating **Anthropic tool/function calling** using the official Anthropic SDK and `python-dotenv`.
 
+This project shows how Claude can:
+
+- Decide when to call a tool
+- Execute Python functions
+- Fetch live weather data from an external API
+- Return tool results back to the model
+
 ---
 
 ## 🚀 Features
 
 - Anthropic tool calling
+- Live weather API integration
+- Open-Meteo weather API
 - Local Python function execution
-- Weather tool example
 - Environment variable management with dotenv
-- Simple and beginner-friendly setup
+- Beginner-friendly implementation
 
 ---
 
@@ -47,5 +55,16 @@ python app.py
 ├── app.py
 ├── .env
 ├── .gitignore
+├── requirements.txt
 └── README.md
 ```
+
+---
+
+## 🛠️ Tech Stack
+
+- Python
+- Anthropic SDK
+- Claude Sonnet 4.6
+- Open-Meteo API
+- python-dotenv
