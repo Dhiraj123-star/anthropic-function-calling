@@ -76,8 +76,17 @@ tools = [
             },
             "required":["city"]
         }
+    },
+
+    # --------------------------------
+    # Anthropic Built-in web search
+    # --------------------------------
+    {
+        "type":"web_search_20250305",
+        "name":"web_search"
     }
 ]
+
 
 # -----------------------
 # Conversation history
@@ -110,7 +119,7 @@ while True:
 
     response = client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens= 1024,
+        max_tokens= 2048,
         tools=tools,
         messages=messages
     )
@@ -158,7 +167,7 @@ while True:
                 # Send tool result back
                 final_response= client.messages.create(
                     model="claude-sonnet-4-6",
-                    max_tokens=1024,
+                    max_tokens=2048,
                     tools=tools,
                     messages =messages
                 )
@@ -174,11 +183,23 @@ while True:
                         "content":final_response.content
                     }
                 )
+            # ----------------------------
+            # Normal text response
+            # ----------------------------
+            elif content.type=="text":
+                tool_used=True
 
-        # --------------------------
-        # Normal Non-Tool Response
-        # --------------------------
-        if not tool_used:
-            assistant_text = response.content[0].text
+                print(f"\nClaude: {content.text}\n")
+            
+            elif content.type=="server_tool_use":
+                tool_used=True
+                print(f"\nClaude is searching the web......")
 
-            print(f"\nClaude: {assistant_text}\n")
+    # --------------------------
+    # Normal Non-Tool Response
+    # --------------------------
+    if not tool_used:
+        for block in response.content:
+            if block.type=="text":
+
+                print(f"\n{block.text}\n")
