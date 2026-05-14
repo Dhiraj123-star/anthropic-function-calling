@@ -19,13 +19,45 @@ class AnthropicChatbot:
             }
         )
 
-        # Claude API call
-        response = client.messages.create(
+        # -----------------------------
+        # Streaming API Call
+        # -----------------------------
+        print("\nClaude: ", end="", flush=True)
+
+        web_search_notified = False
+
+        with client.messages.stream(
             model=MODEL_NAME,
             max_tokens=8096,
             tools=TOOLS,
             messages=self.messages
-        )
+        ) as stream:
+
+            # -----------------------------
+            # Catch server_tool_use BEFORE text streams
+            # by listening to raw stream events
+            # -----------------------------
+            for event in stream:
+
+                # Notify web search as soon as block starts
+                if (
+                    event.type == "content_block_start"
+                    and hasattr(event.content_block, "type")
+                    and event.content_block.type == "server_tool_use"
+                    and not web_search_notified
+                ):
+                    print("\n🌐 Claude is searching the web...\n")
+                    print("Claude: ", end="", flush=True)
+                    web_search_notified = True
+
+                # Stream text chunks live
+                elif event.type == "content_block_delta":
+                    if hasattr(event.delta, "text"):
+                        print(event.delta.text, end="", flush=True)
+
+            response = stream.get_final_message()
+
+        print()  # newline after streaming ends
 
         # Save assistant response
         self.messages.append(
@@ -36,31 +68,22 @@ class AnthropicChatbot:
         )
 
         # -----------------------------
-        # Handle Response Blocks
+        # Handle Custom Tool Calls
         # -----------------------------
-        text_parts = []
-        custom_tool_called = False
-
         for content in response.content:
 
-            # -----------------------------
-            # Custom Tool Calls
-            # -----------------------------
             if content.type == "tool_use":
 
-                custom_tool_called = True
                 tool_name = content.name
                 tool_input = content.input
 
                 print(f"\n🔧 Tool Called: {tool_name}")
                 print(tool_input)
 
-                # Weather Tool
                 if tool_name == "get_current_weather":
 
                     result = get_current_weather(tool_input["city"])
 
-                    # Add tool result
                     self.messages.append(
                         {
                             "role": "user",
@@ -74,46 +97,25 @@ class AnthropicChatbot:
                         }
                     )
 
-                    # Final Claude response
-                    final_response = client.messages.create(
+                    print("\nClaude: ", end="", flush=True)
+
+                    with client.messages.stream(
                         model=MODEL_NAME,
                         max_tokens=8096,
                         tools=TOOLS,
                         messages=self.messages
-                    )
+                    ) as final_stream:
 
-                    # Save final assistant response
+                        for text in final_stream.text_stream:
+                            print(text, end="", flush=True)
+
+                        final_response = final_stream.get_final_message()
+
+                    print()
+
                     self.messages.append(
                         {
                             "role": "assistant",
                             "content": final_response.content
                         }
                     )
-
-                    # Return final text
-                    for block in final_response.content:
-                        if block.type == "text":
-                            return block.text
-
-            # -----------------------------
-            # Built-in Web Search
-            # Anthropic handles server-side — just notify
-            # -----------------------------
-            elif content.type == "server_tool_use":
-                print("🌐 Claude is searching the web...")
-
-            # -----------------------------
-            # Collect ALL text blocks
-            # (web search may produce multiple text blocks)
-            # -----------------------------
-            elif content.type == "text":
-                text_parts.append(content.text)
-
-        # -----------------------------
-        # Return combined full response
-        # (only if no custom tool was called)
-        # -----------------------------
-        if text_parts and not custom_tool_called:
-            return "\n".join(text_parts)
-
-        return "No response generated."
