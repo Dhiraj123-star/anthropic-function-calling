@@ -1,14 +1,14 @@
-# 🤖 Anthropic Conversational Weather Assistant
+# 🤖 Anthropic AI Assistant
 
-A simple Python project demonstrating **Anthropic tool/function calling** using the official Anthropic SDK and `python-dotenv`.
+A Python project demonstrating **Anthropic tool calling and built-in web search** using the official Anthropic SDK.
 
 This project shows how Claude can:
 
 - Decide when to call a tool
 - Execute Python functions
 - Fetch live weather data from an external API
+- Search the web for real-time information
 - Continue multi-turn conversations
-- Answer follow-up weather questions
 - Return tool results back to the model
 
 ---
@@ -16,13 +16,13 @@ This project shows how Claude can:
 ## 🚀 Features
 
 - Anthropic tool calling
+- Built-in web search via `web_search_20250305`
 - Conversational AI assistant
 - Multi-turn chat memory
 - Live weather API integration
 - Open-Meteo weather API
-- Local Python function execution
 - Environment variable management with dotenv
-- Beginner-friendly implementation
+- Clean modular architecture
 
 ---
 
@@ -56,12 +56,14 @@ python app.py
 
 ```bash
 You: What is the weather in Delhi?
-
 Claude: The current weather in Delhi is 36°C.
 
 You: Is it good for walking outside?
-
 Claude: 36°C is quite hot for long walks outside...
+
+You: Latest AI news
+🌐 Claude is searching the web...
+Claude: Here's a roundup of the latest AI news...
 ```
 
 ---
@@ -69,12 +71,26 @@ Claude: 36°C is quite hot for long walks outside...
 ## 📁 Project Structure
 
 ```bash
-.
+anthropic-chatbot/
+│
 ├── app.py
 ├── .env
 ├── .gitignore
 ├── requirements.txt
-└── README.md
+├── README.md
+│
+├── config/
+│   └── settings.py
+│
+├── services/
+│   ├── anthropic_service.py
+│   └── weather_service.py
+│
+├── tools/
+│   └── tools.py
+│
+└── chatbot/
+    └── chatbot.py
 ```
 
 ---
