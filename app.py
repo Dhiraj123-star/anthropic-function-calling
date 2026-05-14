@@ -12,6 +12,6 @@ while True:
     if user_input.lower()=="exit":
         break
 
-    response= bot.chat(user_input)
+    bot.chat(user_input)
 
-    print(f"\nClaude: {response}\n")
+    print()
