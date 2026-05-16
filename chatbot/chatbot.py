@@ -1,3 +1,4 @@
+import json
 from config.settings import MODEL_NAME
 from services.anthropic_service import client
 from services.weather_service import get_current_weather
@@ -9,113 +10,84 @@ class AnthropicChatbot:
     def __init__(self):
         self.messages = []
 
-    def chat(self, user_input: str):
+    def chat_stream(self, user_input: str):
+        """
+        Generator that yields SSE-formatted JSON strings.
 
-        # Add user message
-        self.messages.append(
-            {
-                "role": "user",
-                "content": user_input
-            }
-        )
+        Event types:
+          {"type": "status",  "content": "..."}   — system notices (web search, tool call)
+          {"type": "text",    "content": "..."}   — streamed assistant text chunks
+          {"type": "done"}                        — signals end of response
+        """
 
-        # -----------------------------
-        # Streaming API Call
-        # -----------------------------
-        print("\nClaude: ", end="", flush=True)
+        self.messages.append({"role": "user", "content": user_input})
 
+        # ── First streaming call ──────────────────────────────────────────────
         web_search_notified = False
 
         with client.messages.stream(
             model=MODEL_NAME,
             max_tokens=8096,
             tools=TOOLS,
-            messages=self.messages
+            messages=self.messages,
         ) as stream:
 
-            # -----------------------------
-            # Catch server_tool_use BEFORE text streams
-            # by listening to raw stream events
-            # -----------------------------
             for event in stream:
 
-                # Notify web search as soon as block starts
+                # Detect web search server tool
                 if (
                     event.type == "content_block_start"
                     and hasattr(event.content_block, "type")
                     and event.content_block.type == "server_tool_use"
                     and not web_search_notified
                 ):
-                    print("\n🌐 Claude is searching the web...\n")
-                    print("Claude: ", end="", flush=True)
+                    yield json.dumps({"type": "status", "content": "🌐 Searching the web…"})
                     web_search_notified = True
 
-                # Stream text chunks live
+                # Stream text deltas
                 elif event.type == "content_block_delta":
                     if hasattr(event.delta, "text"):
-                        print(event.delta.text, end="", flush=True)
+                        yield json.dumps({"type": "text", "content": event.delta.text})
 
             response = stream.get_final_message()
 
-        print()  # newline after streaming ends
+        self.messages.append({"role": "assistant", "content": response.content})
 
-        # Save assistant response
-        self.messages.append(
-            {
-                "role": "assistant",
-                "content": response.content
-            }
-        )
-
-        # -----------------------------
-        # Handle Custom Tool Calls
-        # -----------------------------
+        # ── Handle custom tool calls ──────────────────────────────────────────
         for content in response.content:
+            if content.type != "tool_use":
+                continue
 
-            if content.type == "tool_use":
+            tool_name = content.name
+            tool_input = content.input
 
-                tool_name = content.name
-                tool_input = content.input
+            yield json.dumps({"type": "status", "content": f"🔧 Calling tool: {tool_name}"})
 
-                print(f"\n🔧 Tool Called: {tool_name}")
-                print(tool_input)
+            if tool_name == "get_current_weather":
+                result = get_current_weather(tool_input["city"])
 
-                if tool_name == "get_current_weather":
+                self.messages.append({
+                    "role": "user",
+                    "content": [{
+                        "type": "tool_result",
+                        "tool_use_id": content.id,
+                        "content": result,
+                    }],
+                })
 
-                    result = get_current_weather(tool_input["city"])
+                # Second streaming call after tool result
+                with client.messages.stream(
+                    model=MODEL_NAME,
+                    max_tokens=8096,
+                    tools=TOOLS,
+                    messages=self.messages,
+                ) as final_stream:
 
-                    self.messages.append(
-                        {
-                            "role": "user",
-                            "content": [
-                                {
-                                    "type": "tool_result",
-                                    "tool_use_id": content.id,
-                                    "content": result
-                                }
-                            ]
-                        }
-                    )
+                    for text in final_stream.text_stream:
+                        yield json.dumps({"type": "text", "content": text})
 
-                    print("\nClaude: ", end="", flush=True)
+                    final_response = final_stream.get_final_message()
 
-                    with client.messages.stream(
-                        model=MODEL_NAME,
-                        max_tokens=8096,
-                        tools=TOOLS,
-                        messages=self.messages
-                    ) as final_stream:
+                self.messages.append({"role": "assistant", "content": final_response.content})
 
-                        for text in final_stream.text_stream:
-                            print(text, end="", flush=True)
-
-                        final_response = final_stream.get_final_message()
-
-                    print()
-
-                    self.messages.append(
-                        {
-                            "role": "assistant",
-                            "content": final_response.content
-                        }
-                    )
+        yield json.dumps({"type": "done"})
