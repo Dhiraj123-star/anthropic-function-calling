@@ -7,6 +7,7 @@ A production-style Python project demonstrating:
 * Real-time streaming responses
 * HTML chatbot frontend
 * FastAPI backend integration
+* Dockerized deployment
 
 using the official Anthropic SDK.
 
@@ -35,6 +36,8 @@ This project shows how Claude can:
 * Open-Meteo weather API
 * Markdown rendering support
 * Modular architecture
+* Docker support
+* Docker Compose support
 * Environment variable management with dotenv
 
 ---
@@ -57,7 +60,7 @@ ANTHROPIC_API_KEY=your_api_key_here
 
 ---
 
-# ▶️ Run The Project
+# ▶️ Run Locally
 
 ```bash
 uvicorn app:app --reload
@@ -67,6 +70,28 @@ Open in browser:
 
 ```bash
 http://127.0.0.1:8000
+```
+
+---
+
+# 🐳 Run With Docker
+
+## Build Containers
+
+```bash
+docker compose build
+```
+
+## Start Application
+
+```bash
+docker compose up
+```
+
+Open in browser:
+
+```bash
+http://localhost:8000
 ```
 
 ---
@@ -93,6 +118,9 @@ Claude: Here's a roundup of the latest AI news...
 anthropic-chatbot/
 │
 ├── app.py
+├── Dockerfile
+├── docker-compose.yml
+├── .dockerignore
 ├── .env
 ├── .gitignore
 ├── requirements.txt
@@ -129,6 +157,8 @@ anthropic-chatbot/
 * Open-Meteo API
 * HTML/CSS/JavaScript
 * SSE Streaming
+* Docker
+* Docker Compose
 * python-dotenv
 
 ---
@@ -143,5 +173,6 @@ anthropic-chatbot/
 * Modular backend architecture
 * HTML chatbot UI
 * Markdown response rendering
+* Dockerized deployment
 
 ---
