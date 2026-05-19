@@ -8,6 +8,7 @@ A production-style Python project demonstrating:
 * HTML chatbot frontend
 * FastAPI backend integration
 * Dockerized deployment
+* NGINX reverse proxy support
 
 using the official Anthropic SDK.
 
@@ -38,6 +39,8 @@ This project shows how Claude can:
 * Modular architecture
 * Docker support
 * Docker Compose support
+* NGINX reverse proxy
+* Production-ready container setup
 * Environment variable management with dotenv
 
 ---
@@ -74,7 +77,7 @@ http://127.0.0.1:8000
 
 ---
 
-# 🐳 Run With Docker
+# 🐳 Run With Docker + NGINX
 
 ## Build Containers
 
@@ -82,7 +85,7 @@ http://127.0.0.1:8000
 docker compose build
 ```
 
-## Start Application
+## Start Services
 
 ```bash
 docker compose up
@@ -91,7 +94,7 @@ docker compose up
 Open in browser:
 
 ```bash
-http://localhost:8000
+http://localhost
 ```
 
 ---
@@ -126,6 +129,9 @@ anthropic-chatbot/
 ├── requirements.txt
 ├── README.md
 │
+├── nginx/
+│   └── nginx.conf
+│
 ├── config/
 │   └── settings.py
 │
@@ -159,6 +165,7 @@ anthropic-chatbot/
 * SSE Streaming
 * Docker
 * Docker Compose
+* NGINX
 * python-dotenv
 
 ---
@@ -174,5 +181,6 @@ anthropic-chatbot/
 * HTML chatbot UI
 * Markdown response rendering
 * Dockerized deployment
+* NGINX reverse proxy support
 
 ---
